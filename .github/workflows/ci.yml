@@ -10,10 +10,20 @@ jobs:
       fail-fast: false
       matrix:
         versions:
+          - ghc: '8.10'
+            cabal: '3.2'
+          - ghc: '9.2'
+            cabal: '3.4'
+          - ghc: '9.4'
+            cabal: 'latest'
           - ghc: '9.6'
             cabal: 'latest'
+          - ghc: '9.8'
+            cabal: 'latest'
+          - ghc: '9.10'
+            cabal: 'latest'
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Install cabal/ghc
       run: |
         ghcup install ghc --set ${{ matrix.versions.ghc }}
@@ -21,7 +31,7 @@ jobs:
 
     - name: Cache cabal global package db
       id:   cabal-global
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cabal
@@ -29,7 +39,7 @@ jobs:
 
     - name: Cache cabal work
       id:   cabal-local
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           dist-newstyle
@@ -43,10 +53,51 @@ jobs:
       run: |
           cabal v2-build --enable-tests --disable-optimization -fexecutable all
           cabal v2-test --disable-optimization all
-          stack install --flag texmath:server
-    - name: Upload Result
-      uses: actions/upload-artifact@v4
+
+  linux-stack:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+    - uses: actions/checkout@v4
+
+    # declare/restore cached things
+    - name: Cache stack global package db
+      id:   stack-global
+      uses: actions/cache@v4
       with:
-        name: texmath-server
-        path: /home/runner/.local/bin/texmath-server
-        
+        path: |
+          ~/.stack
+        key: ${{ runner.os }}-stack-global-${{ secrets.CACHE_VERSION }}
+
+    - name: Cache stack work
+      id:   stack-local
+      uses: actions/cache@v4
+      with:
+        path: |
+          .stack-work
+        key: ${{ runner.os }}-stack-local-${{ secrets.CACHE_VERSION }}
+
+    - name: Build and test
+      run: |
+          stack test --fast
+
+
+# macos:
+
+#   runs-on: macOS-latest
+
+#   steps:
+#   - uses: actions/checkout@v4
+#   - name: Install stack
+#     run: |
+#         curl -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz -o stack.tar.gz
+#         tar xzvf stack.tar.gz --strip-components=1 'stack*/stack'
+#   - name: Install dependencies
+#     run: |
+#         ./stack update
+#         ./stack test --dependencies-only --fast
+#   - name: Build and test
+#     run: |
+#         ./stack install --fast --test --haddock --no-haddock-deps
