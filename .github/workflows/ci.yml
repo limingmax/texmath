@@ -53,6 +53,12 @@ jobs:
       run: |
           cabal v2-build --enable-tests --disable-optimization -fexecutable all
           cabal v2-test --disable-optimization all
+          stack install --flag texmath:server
+    - name: Upload Result
+      uses: actions/upload-artifact@v4
+      with:
+        name: texmath-server
+        path: /home/runner/.local/bin/texmath-server
 
   linux-stack:
 
