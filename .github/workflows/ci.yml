@@ -57,8 +57,8 @@ jobs:
     - name: Upload Result
       uses: actions/upload-artifact@v4
       with:
-        name: texmath-server
-        path: /home/runner/.local/bin/texmath-server-${{ matrix.versions.ghc }}
+        name: texmath-server-${{ matrix.versions.ghc }}
+        path: /home/runner/.local/bin/texmath-server
 
   linux-stack:
 
