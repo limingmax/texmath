@@ -202,6 +202,7 @@ command = try $ do
   choice
     [ text c
     , styled c
+    , colored c
     , root c
     , xspace c
     , mathop c
@@ -442,18 +443,21 @@ endLineAMS = lexeme $ try $ do
 
 arrayLine :: TP ArrayLine
 arrayLine =
-  sepBy1 (unGrouped <$>
-    manyExp (try (ignorable' *> notFollowedBy (('\n' <$ ctrlseq "end") <|> endLine)) *>
-               expr <*
-               ignorable')) (symbol "&")
-  where ignorable' = ignorable >>
-                     optional (try (ctrlseq "hline" >> ignorable'))
+  sepBy1
+    (ignorable' *>
+      (unGrouped <$>
+        manyExp (try (notFollowedBy (('\n' <$ ctrlseq "end") <|> endLine)) *>
+                   expr <* ignorable'))) (symbol "&")
+  where ignorable' = ignorable >> optional (try (ctrlseq "hline" >> ignorable'))
   -- we don't represent the line, but it shouldn't crash parsing
 
 arrayAlignments :: TP [Alignment]
 arrayAlignments = mconcat <$>
-  braces (many (((:[]) . letterToAlignment <$> letter)
+  braces (many (
+                ((:[]) . letterToAlignment <$> letter)
             <|> ([] <$ char '|')
+            <|> ([] <$ oneOf " \t")
+            <|> ([] <$ ((char '@' <|> char '!') <* inbraces))
             <|> (do char '*'
                     num <- T.pack <$> braces (many1 digit)
                     cols <- arrayAlignments
@@ -673,6 +677,13 @@ styled c = do
                        EGrouped xs -> f xs
                        _           -> f [x]
        Nothing  -> mzero
+
+colored :: Text -> TP Exp
+colored "\\color" = do
+  _ <- inbraces -- skip the color
+  -- in the future we might add color to the types or to the styles
+  texSymbol <|> inbraces <|> texChar
+colored _ = mzero
 
 -- note: sqrt can be unary, \sqrt{2}, or binary, \sqrt[3]{2}
 root :: Text -> TP Exp
